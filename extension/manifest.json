@@ -1,0 +1,11 @@
+{
+  "manifest_version": 3,
+  "name": "News Detector AI",
+  "version": "1.0",
+  "description": "Instant fake news detection using AI.",
+  "permissions": ["activeTab", "storage", "scripting"],
+  "action": {
+    "default_popup": "popup.html"
+  },
+  "host_permissions": ["http://localhost:5000/*"]
+}

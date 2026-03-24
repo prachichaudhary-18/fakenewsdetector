@@ -1,0 +1,11 @@
+fastapi
+uvicorn
+pydantic
+beautifulsoup4
+newspaper3k
+lime
+transformers
+torch
+requests
+lxml
+lxml_html_clean

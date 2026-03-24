@@ -1,0 +1,38 @@
+# FastAPI Fake News Detector Walkthrough
+
+The FastAPI microservice has been successfully built and configured according to the requirements. Here is a summary of the implementation:
+
+## Overview
+- **Location:** The code was created in the `c:\Users\prachi choudhary\Desktop\newsdetector` directory.
+- **Dependencies:** Provided in `requirements.txt` (FastAPI, uvicorn, LIME, transformers, torch, BeautifulSoup4, newspaper3k, etc.).
+- **Service Core:** Implemented in `main.py`.
+
+## Features Implemented
+### 1. Model Loading
+- Integrated the `BERT_Explainer` logic from the provided Jupyter Notebook.
+- Uses FastAPI's `lifespan` event to load the `BERT_Explainer` asynchronously on startup.
+- Defaults to loading `./fake_news_bert_model` but safely falls back to `bert-base-uncased` if the fine-tuned model is not present in the current directory.
+
+### 2. Endpoints
+- **`GET /health`**: Returns `{"status": "healthy", "model_loaded": True}` if the model initialized correctly.
+- **`POST /analyze/text`**: 
+  - Validates input using a Pydantic model (`AnalyzeTextRequest`).
+  - Utilizes LIME to extract the top 5 most contributing phrases toward the verdict.
+  - Returns `verdict` (Real/Fake), `confidence` level, and the `lime_phrases`.
+- **`POST /analyze/url`**: 
+  - Validates the input as a strictly formatted HTTP URL using Pydantic (`AnalyzeUrlRequest`).
+  - Scrapes article text robustly using `newspaper3k`, with a fallback mechanism leveraging `BeautifulSoup` (`bs4`).
+  - Passes the extracted text through the text analysis pipeline to generate the verdict, confidence, and LIME phrases.
+
+### 3. Error Handling & Validation
+- Robust Pydantic schema validation for incoming JSON payloads.
+- Added explicit type hints and runtime `None` checks for the model explainer to handle potential cold start or missing model scenarios gracefully (returning `503 Service Unavailable`).
+- Custom global exception handler that logs and properly wraps unknown internal server errors (`500`) into JSON responses while preventing side effects with standard HTTP exceptions like `404` or `422`.
+
+## Next Steps
+You can run the application directly from the terminal with:
+```bash
+pip install -r requirements.txt
+uvicorn main:app --reload
+```
+Once started, the auto-generated interactive documentation will be available at `http://127.0.0.1:8000/docs`, where you can test the APIs explicitly.

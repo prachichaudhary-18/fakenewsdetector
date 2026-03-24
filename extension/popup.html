@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="style.css">
+  <title>News Detector AI</title>
+</head>
+<body>
+  <div class="container glass-panel">
+    <header>
+      <div class="logo">
+        <span class="logo-text">TruthGuard AI</span>
+      </div>
+    </header>
+
+    <main id="app">
+      <!-- Login View -->
+      <div id="login-view" class="view hidden">
+        <h2>Secure Login</h2>
+        <p class="subtitle">Enter your credentials to start scanning.</p>
+        <form id="login-form">
+          <div class="input-group">
+            <input type="email" id="email" placeholder="Email address" required>
+          </div>
+          <div class="input-group">
+            <input type="password" id="password" placeholder="Password" required>
+          </div>
+          <button type="submit" class="btn-primary">Connect Account</button>
+        </form>
+        <div id="auth-error" class="error-text"></div>
+      </div>
+
+      <!-- Scanner View -->
+      <div id="scan-view" class="view">
+        <div id="idle-state">
+          <h2>Analyze Current Page</h2>
+          <p class="subtitle">Extracting the truth from the current article...</p>
+          <div class="current-url" id="display-url">Loading URL...</div>
+          <button id="scan-btn" class="btn-primary">Scan Article Now</button>
+        </div>
+
+        <div id="loading-state" class="hidden">
+          <div class="spinner"></div>
+          <p>Neural analysis in progress...</p>
+        </div>
+
+        <div id="result-state" class="hidden">
+            <div id="result-header">
+                <div id="verdict-label"></div>
+                <div id="confidence-value"></div>
+            </div>
+            <div id="phrases-container">
+                <h3>Key Suspicious Markers:</h3>
+                <ul id="phrases-list"></ul>
+            </div>
+            <button id="reset-btn" class="btn-secondary">New Scan</button>
+        </div>
+      </div>
+    </main>
+
+    <footer>
+      <button id="logout-btn" class="btn-text">Sign Out</button>
+    </footer>
+  </div>
+  <script src="popup.js"></script>
+</body>
+</html>
