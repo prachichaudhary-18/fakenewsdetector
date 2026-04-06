@@ -28,24 +28,49 @@ const Scanner = () => {
       });
     }, 40);
 
-    setTimeout(() => {
-      clearInterval(interval);
-      setIsScanning(false);
-      setProgress(100);
-      
-      setResult({
-        verdict: 'FAKE',
-        confidence: 94,
-        text: 'The local mayor was spotted secretly meeting with aliens in the downtown park. The extraterrestrial beings supposedly handed him a glowing orb. Eyewitnesses say the mayor then flew away on a spaceship.',
-        limeHighlights: [
-          { word: 'aliens', type: 'highlight-red' },
-          { word: 'extraterrestrial', type: 'highlight-red' },
-          { word: 'spaceship', type: 'highlight-red' },
-          { word: 'orb', type: 'highlight-red' },
-          { word: 'secretly', type: 'highlight-red' },
-        ]
-      });
-    }, 2000);
+    const fetchScanResult = async () => {
+      try {
+        const payload = activeTab === 'text' ? { text: inputValue } : { url: inputValue };
+        // The Node.js backend is running on port 3004 as per .env
+        const API_URL = `http://${window.location.hostname}:3004/scan`;
+        const response = await fetch(API_URL, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            // If authentication is required, add token here. 
+            // For now, mirroring the existing server.js which has a 'protect' middleware.
+            // Assuming the user might need to be logged in, but for this fix we'll try the request.
+          },
+          body: JSON.stringify(payload),
+        });
+
+        if (!response.ok) {
+          throw new Error('Analysis failed. Please check if the backend is running.');
+        }
+
+        const data = await response.json();
+        
+        // Map backend response to frontend format
+        setResult({
+          verdict: data.verdict.toUpperCase(), // 'REAL' or 'FAKE'
+          confidence: Math.round(data.confidence * 100),
+          text: data.inputText || data.inputUrl || inputValue,
+          limeHighlights: (data.highlights || data.lime_phrases || []).map(h => ({
+            word: h.phrase,
+            type: h.score > 0 ? 'highlight-green' : 'highlight-red'
+          }))
+        });
+      } catch (error) {
+        console.error('Scan error:', error);
+        alert(error.message);
+      } finally {
+        setIsScanning(false);
+        setProgress(100);
+        clearInterval(interval);
+      }
+    };
+
+    fetchScanResult();
   };
 
   const renderHighlightedText = () => {

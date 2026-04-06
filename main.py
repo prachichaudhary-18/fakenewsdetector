@@ -25,16 +25,27 @@ class BERT_Explainer:
         # In a real scenario, this would point to the trained model directory, e.g. "./fake_news_bert_model"
         # Since we might not have it saved, we'll try to load it or fallback to base (which would have random weights for classification).
         try:
+            # We try to load the dedicated model if it exists
             self.model = AutoModelForSequenceClassification.from_pretrained(model_path_or_name).to(self.device)
             self.tokenizer = AutoTokenizer.from_pretrained(model_path_or_name)
         except Exception as e:
-            print(f"Warning: Could not load model from {model_path_or_name}. Falling back to base uncased model: {e}")
-            fallback = "bert-base-uncased"
-            self.model = AutoModelForSequenceClassification.from_pretrained(fallback, num_labels=2).to(self.device)
+            print(f"Warning: Could not load model from {model_path_or_name}. Using a robust external model: {e}")
+            # hamzab/roberta-fake-news-classification is very accurate and used widely
+            fallback = "hamzab/roberta-fake-news-classification"
+            self.model = AutoModelForSequenceClassification.from_pretrained(fallback).to(self.device)
             self.tokenizer = AutoTokenizer.from_pretrained(fallback)
             
         self.model.eval()
-        self.explainer = LimeTextExplainer(class_names=['Fake', 'Real'])
+        
+        # Dynamically detect label mapping from model config
+        # Default to 0: Fake, 1: Real if not found
+        self.id2label = {0: "Fake", 1: "Real"}
+        if hasattr(self.model.config, 'id2label'):
+            # Normalize labels to title case
+            self.id2label = {int(k): v.title() for k, v in self.model.config.id2label.items()}
+            
+        print(f"Model ID2Label Mapping: {self.id2label}")
+        self.explainer = LimeTextExplainer(class_names=[self.id2label[0], self.id2label[1]])
 
     def predictor_func(self, texts: List[str]):
         # LIME calls this with a list of strings
@@ -57,12 +68,27 @@ class BERT_Explainer:
         exp = self.explainer.explain_instance(text, self.predictor_func, num_features=num_features, num_samples=100)
         
         probs = self.predictor_func([text])[0]
-        # Class 1 is Real, Class 0 is Fake
-        confidence_real = float(probs[1])
-        confidence_fake = float(probs[0])
         
-        verdict = "Real" if confidence_real > confidence_fake else "Fake"
-        confidence = max(confidence_real, confidence_fake)
+        # Dynamically find which index corresponds to 'Real' and 'Fake'
+        # We index into self.id2label
+        real_idx = 1
+        fake_idx = 0
+        for idx, label in self.id2label.items():
+            if label.lower() == "real":
+                real_idx = idx
+            elif label.lower() == "fake":
+                fake_idx = idx
+        
+        confidence_real = float(probs[real_idx])
+        confidence_fake = float(probs[fake_idx])
+        
+        # Simple balanced decision
+        if confidence_real > confidence_fake:
+            verdict = "Real"
+            confidence = confidence_real
+        else:
+            verdict = "Fake"
+            confidence = confidence_fake
         
         # Format contributions
         phrases_scores = [{"phrase": phrase, "score": float(score)} for phrase, score in exp.as_list()]
@@ -175,6 +201,18 @@ def scrape_article(url: str) -> str:
 # ==========================================
 # 6. Endpoints
 # ==========================================
+
+@app.get("/")
+async def root():
+    return {
+        "message": "Fake News Detector API is running",
+        "endpoints": {
+            "health": "/health",
+            "docs": "/docs",
+            "analyze_text": "/analyze/text (POST)",
+            "analyze_url": "/analyze/url (POST)"
+        }
+    }
 
 @app.get("/health")
 async def health_check():

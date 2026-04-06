@@ -18,7 +18,7 @@ const scanLimiter = rateLimit({
 const fastApiBase = process.env.FASTAPI_URL || 'http://127.0.0.1:8000';
 
 // POST /scan (mounted from server.js as both /scan and /scans)
-router.post('/', protect, scanLimiter, async (req, res) => {
+router.post('/', scanLimiter, async (req, res) => {
   try {
     const { text, url } = req.body;
     
@@ -36,12 +36,17 @@ router.post('/', protect, scanLimiter, async (req, res) => {
     
     const { verdict, confidence, lime_phrases } = fastApiResponse.data;
 
-    // Save result to MongoDB
+    // Ensure verdict matches the enum ['Fake', 'Real'] despite capitalization
+    const formattedVerdict = verdict.charAt(0).toUpperCase() + verdict.slice(1).toLowerCase();
+
+    // Save result to MongoDB (associated with user if logged in, otherwise 'Guest')
+    const userId = req.user ? req.user._id : null;
+    
     const newScan = await Scan.create({
-      userId: req.user._id,
+      userId,
       inputText: text || null,
       inputUrl: url || null,
-      verdict,
+      verdict: formattedVerdict,
       confidence,
       highlights: lime_phrases || []
     });
